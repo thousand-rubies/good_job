@@ -37,10 +37,13 @@ module GoodJob
     def current_locale
       if params[:locale]
         params[:locale]
+      elsif I18n.enforce_available_locales && !I18n.locale_available?(I18n.default_locale)
+        # Cover an edge-case of potential application misconfiguration
+        I18n.available_locales.first
       elsif good_job_available_locales.exclude?(I18n.default_locale) && I18n.available_locales.include?(:en)
         :en
       else
-        I18n.default_locale
+        I18n.default_locale || I18n.available_locales.first
       end
     end
 
