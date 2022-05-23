@@ -23,7 +23,9 @@ platforms :ruby do
   gem "activerecord-explain-analyze"
   gem "memory_profiler"
   gem "pry-byebug"
+  gem 'rack-mini-profiler'
   gem "rbtrace"
+  gem 'stackprof'
 
   group :lint do
     gem 'easy_translate'
