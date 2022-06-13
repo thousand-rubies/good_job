@@ -7,7 +7,7 @@ RSpec.describe GoodJob::ProbeServer do
   let(:port) { 3434 }
 
   after do
-    probe_server.stop
+    probe_server.shutdown
   end
 
   describe '#start' do

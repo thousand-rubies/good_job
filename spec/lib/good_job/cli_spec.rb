@@ -80,7 +80,7 @@ RSpec.describe GoodJob::CLI do
     end
 
     describe 'probe-port' do
-      let(:probe_server) { instance_double GoodJob::ProbeServer, start: nil, stop: nil }
+      let(:probe_server) { instance_double GoodJob::ProbeServer, start: nil, shutdown: nil }
 
       before do
         allow(Kernel).to receive(:loop)
@@ -93,7 +93,7 @@ RSpec.describe GoodJob::CLI do
 
         expect(GoodJob::ProbeServer).to have_received(:new).with(port: 3838)
         expect(probe_server).to have_received(:start)
-        expect(probe_server).to have_received(:stop)
+        expect(probe_server).to have_received(:shutdown)
       end
     end
   end

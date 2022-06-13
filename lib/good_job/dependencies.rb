@@ -6,6 +6,8 @@ module GoodJob # :nodoc:
     extend ActiveSupport::Concern
 
     included do
+      define_callbacks :framework_ready
+
       # @!attribute [rw] _rails_after_initialize_hook_called
       #   @!scope class
       #   Whether Railtie.after_initialize has been called yet (default: +false+).

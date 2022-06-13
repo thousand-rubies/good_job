@@ -4,6 +4,12 @@ module GoodJob
   class ProbeServer
     RACK_SERVER = 'webrick'
 
+    # @!attribute [r] instances
+    #   @!scope class
+    #   List of all instantiated Schedulers in the current process.
+    #   @return [Array<GoodJob::Scheduler>, nil]
+    cattr_reader :instances, default: [], instance_reader: false
+
     def self.task_observer(time, output, thread_error) # rubocop:disable Lint/UnusedMethodArgument
       return if thread_error.is_a? Concurrent::CancelledOperationError
 
@@ -11,6 +17,7 @@ module GoodJob
     end
 
     def initialize(port:)
+      self.class.instances << self
       @port = port
     end
 
@@ -27,10 +34,21 @@ module GoodJob
       @handler&.instance_variable_get(:@server)&.status == :Running
     end
 
-    def stop
-      @handler&.shutdown
-      @future&.value # wait for Future to exit
+    def shutdown?
+      !running?
     end
+
+    def restart(timeout: -1)
+      shutdown(timeout: timeout)
+      start
+    end
+
+    # @param timeout [nil] is ignored
+    def shutdown(timeout: nil)
+      @handler&.shutdown
+      @future&.value(timeout) # wait for Future to exit
+    end
+    alias stop shutdown
 
     def call(env)
       case Rack::Request.new(env).path

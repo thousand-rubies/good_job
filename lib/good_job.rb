@@ -18,6 +18,7 @@ require "good_job/railtie"
 #
 # +GoodJob+ is the top-level namespace and exposes configuration attributes.
 module GoodJob
+  include ActiveSupport::Callbacks
   include GoodJob::Dependencies
 
   DEFAULT_LOGGER = ActiveSupport::TaggedLogging.new(ActiveSupport::Logger.new($stdout))
@@ -30,6 +31,12 @@ module GoodJob
   #   @example Change the base class:
   #     GoodJob.active_record_parent_class = "CustomApplicationRecord"
   mattr_accessor :active_record_parent_class, default: "ActiveRecord::Base"
+
+  #@!attribute [rw] configuration
+  #   @!scope class
+  #   The configuration object for GoodJob
+  #   @return [Configuration, nil]
+  mattr_accessor :configuration, default: Configuration.new({})
 
   # @!attribute [rw] logger
   #   @!scope class
@@ -69,6 +76,8 @@ module GoodJob
   #     GoodJob.on_thread_error = -> (exception) { Raven.capture_exception(exception) }
   #   @return [Proc, nil]
   mattr_accessor :on_thread_error, default: nil
+
+  mattr_reader :_manager
 
   # Called with exception when a GoodJob thread raises an exception
   # @param exception [Exception] Exception that was raised
@@ -149,6 +158,22 @@ module GoodJob
       GoodJob::Execution.where(job: old_jobs).destroy_all
       payload[:destroyed_records_count] = old_jobs_count
     end
+  end
+
+  # Whether running in a web server process.
+  # @return [Boolean, nil]
+  def self.in_server_process?
+    return @@_in_server_process if class_variable_defined?(:@@_in_server_process)
+
+    @@_in_server_process = Rails.const_defined?(:Server) ||
+      caller.grep(%r{config.ru}).any? || # EXAMPLE: config.ru:3:in `block in <main>' OR config.ru:3:in `new_from_string'
+      caller.grep(%{/rack/handler/}).any? || # EXAMPLE: iodine-0.7.44/lib/rack/handler/iodine.rb:13:in `start'
+      (Concurrent.on_jruby? && caller.grep(%r{jruby/rack/rails_booter}).any?) # EXAMPLE: uri:classloader:/jruby/rack/rails_booter.rb:83:in `load_environment'
+  end
+
+  def self._manager=(manager)
+    raise "GoodJob.manager already set" if self._manager.present?
+    @@_manager = manager
   end
 
   def self._executables

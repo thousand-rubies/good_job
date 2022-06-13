@@ -89,17 +89,12 @@ module GoodJob
 
       Daemon.new(pidfile: configuration.pidfile).daemonize if configuration.daemonize?
 
-      notifier = GoodJob::Notifier.new
-      poller = GoodJob::Poller.new(poll_interval: configuration.poll_interval)
-      scheduler = GoodJob::Scheduler.from_configuration(configuration, warm_cache_on_initialize: true)
-      notifier.recipients << [scheduler, :create_thread]
-      poller.recipients << [scheduler, :create_thread]
+      GoodJob._manager = Manager.new(configuration)
+      GoodJob._manager.start
 
-      cron_manager = GoodJob::CronManager.new(configuration.cron_entries, start_on_initialize: true) if configuration.enable_cron?
-
-      if configuration.probe_port
-        probe_server = GoodJob::ProbeServer.new(port: configuration.probe_port)
-        probe_server.start
+      if @configuration.probe_port
+        @probe_server = GoodJob::ProbeServer.new(port: @configuration.probe_port)
+        @probe_server.start
       end
 
       @stop_good_job_executable = false
@@ -109,12 +104,11 @@ module GoodJob
 
       Kernel.loop do
         sleep 0.1
-        break if @stop_good_job_executable || scheduler.shutdown? || notifier.shutdown?
+        break if @stop_good_job_executable || GoodJob._manager.scheduler_shutdown? || GoodJob._manager.notifier_shutdown?
       end
 
-      executors = [notifier, poller, cron_manager, scheduler].compact
-      GoodJob._shutdown_all(executors, timeout: configuration.shutdown_timeout)
-      probe_server&.stop
+      GoodJob._manager.shutdown(timeout: configuration.shutdown_timeout)
+      @probe_server.shutdown(timeout: configuration.shutdown_timeout)
     end
 
     default_task :start

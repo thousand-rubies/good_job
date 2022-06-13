@@ -32,6 +32,8 @@ module GoodJob
         ActiveSupport::Deprecation.warn(
           "GoodJob::Adapter's execution-related arguments (queues, max_threads, poll_interval, start_async_on_initialize) have been deprecated and will be removed in GoodJob v3. These options should be configured through GoodJob global configuration instead."
         )
+
+        @custom_executor = true
       end
 
       @configuration = GoodJob::Configuration.new(
@@ -80,7 +82,7 @@ module GoodJob
         job_state = { queue_name: execution.queue_name }
         job_state[:scheduled_at] = execution.scheduled_at if execution.scheduled_at
 
-        executed_locally = execute_async? && @scheduler&.create_thread(job_state)
+        executed_locally = execute_async? && (@manager || GoodJob._manager).execute(job_state)
         Notifier.notify(job_state) unless executed_locally
       end
 
@@ -101,8 +103,7 @@ module GoodJob
                   timeout
                 end
 
-      executables = [@notifier, @poller, @scheduler].compact
-      GoodJob._shutdown_all(executables, timeout: timeout)
+      @manager.shutdown(timeout: timeout) if @manager
       @_async_started = false
     end
 
@@ -110,14 +111,14 @@ module GoodJob
     # @return [Boolean]
     def execute_async?
       @configuration.execution_mode == :async_all ||
-        (@configuration.execution_mode.in?([:async, :async_server]) && in_server_process?)
+        (@configuration.execution_mode.in?([:async, :async_server]) && GoodJob.in_server_process?)
     end
 
     # Whether in +:external+ execution mode.
     # @return [Boolean]
     def execute_externally?
       @configuration.execution_mode == :external ||
-        (@configuration.execution_mode.in?([:async, :async_server]) && !in_server_process?)
+        (@configuration.execution_mode.in?([:async, :async_server]) && !GoodJob.in_server_process?)
     end
 
     # Whether in +:inline+ execution mode.
@@ -131,13 +132,8 @@ module GoodJob
     def start_async
       return unless execute_async?
 
-      @notifier = GoodJob::Notifier.new
-      @poller = GoodJob::Poller.new(poll_interval: @configuration.poll_interval)
-      @scheduler = GoodJob::Scheduler.from_configuration(@configuration, warm_cache_on_initialize: true)
-      @notifier.recipients << [@scheduler, :create_thread]
-      @poller.recipients << [@scheduler, :create_thread]
-
-      @cron_manager = GoodJob::CronManager.new(@configuration.cron_entries, start_on_initialize: true) if @configuration.enable_cron?
+      @manager = Manager.new(@configuration)
+      @manager.start
 
       @_async_started = true
     end
@@ -146,19 +142,6 @@ module GoodJob
     # @return [Boolean]
     def async_started?
       @_async_started
-    end
-
-    private
-
-    # Whether running in a web server process.
-    # @return [Boolean, nil]
-    def in_server_process?
-      return @_in_server_process if defined? @_in_server_process
-
-      @_in_server_process = Rails.const_defined?(:Server) ||
-                            caller.grep(%r{config.ru}).any? || # EXAMPLE: config.ru:3:in `block in <main>' OR config.ru:3:in `new_from_string'
-                            caller.grep(%{/rack/handler/}).any? || # EXAMPLE: iodine-0.7.44/lib/rack/handler/iodine.rb:13:in `start'
-                            (Concurrent.on_jruby? && caller.grep(%r{jruby/rack/rails_booter}).any?) # EXAMPLE: uri:classloader:/jruby/rack/rails_booter.rb:83:in `load_environment'
     end
   end
 end
