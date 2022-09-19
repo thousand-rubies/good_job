@@ -76,7 +76,7 @@ module ExampleAppHelper
   end
 
   def example_app_path
-    Rails.root.join('../../tmp', app_name)
+    Rails.root.join('../tmp', app_name)
   end
 
   def app_name
