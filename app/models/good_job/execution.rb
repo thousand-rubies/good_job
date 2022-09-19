@@ -21,6 +21,7 @@ module GoodJob
     self.advisory_lockable_column = 'active_job_id'
 
     define_model_callbacks :perform_unlocked, only: :after
+    set_callback :perform_unlocked, :after, :finalize_batch
 
     # Parse a string representing a group of queues into a more readable data
     # structure.
@@ -65,6 +66,7 @@ module GoodJob
       end
     end
 
+    belongs_to :batch, class_name: 'GoodJob::Batch', optional: true, inverse_of: :executions
     belongs_to :job, class_name: 'GoodJob::Job', foreign_key: 'active_job_id', primary_key: 'active_job_id', optional: true, inverse_of: :executions
 
     # Get Jobs with given ActiveJob ID
@@ -247,7 +249,7 @@ module GoodJob
     #   Whether to establish a lock on the {Execution} record after it is created.
     # @return [Execution]
     #   The new {Execution} instance representing the queued ActiveJob job.
-    def self.enqueue(active_job, scheduled_at: nil, create_with_advisory_lock: false)
+    def self.enqueue(active_job, scheduled_at: nil, batch_id: nil, batch_callback_id: nil, create_with_advisory_lock: false)
       ActiveSupport::Notifications.instrument("enqueue_job.good_job", { active_job: active_job, scheduled_at: scheduled_at, create_with_advisory_lock: create_with_advisory_lock }) do |instrument_payload|
         execution_args = {
           active_job_id: active_job.job_id,
@@ -257,6 +259,15 @@ module GoodJob
           scheduled_at: scheduled_at,
           create_with_advisory_lock: create_with_advisory_lock,
         }
+
+        if CurrentThread.active_job_id == active_job.job_id
+          current_execution = CurrentThread.execution
+          execution_args[:batch_id] = current_execution.batch_id
+          execution_args[:batch_callback_id] = current_execution.batch_callback_id
+        else
+          execution_args[:batch_id] = batch_id
+          execution_args[:batch_callback_id] = batch_callback_id
+        end
 
         execution_args[:concurrency_key] = active_job.good_job_concurrency_key if active_job.respond_to?(:good_job_concurrency_key)
 
@@ -384,6 +395,10 @@ module GoodJob
           ExecutionResult.new(value: nil, unhandled_error: e)
         end
       end
+    end
+
+    def finalize_batch
+      batch._finalize(self) if batch.present?
     end
   end
 end

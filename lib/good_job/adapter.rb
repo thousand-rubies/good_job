@@ -49,10 +49,17 @@ module GoodJob
       scheduled_at = timestamp ? Time.zone.at(timestamp) : nil
       will_execute_inline = execute_inline? && (scheduled_at.nil? || scheduled_at <= Time.current)
 
+      unless GoodJob::Bulk.jobs.nil?
+        GoodJob::Bulk.jobs << [self, active_job, scheduled_at]
+        return
+      end
+
       execution = GoodJob::Execution.enqueue(
         active_job,
         scheduled_at: scheduled_at,
-        create_with_advisory_lock: will_execute_inline
+        create_with_advisory_lock: will_execute_inline,
+        batch_id: GoodJob::Batch.current_batch_id,
+        batch_callback_id: GoodJob::Batch.current_batch_callback_id
       )
 
       if will_execute_inline

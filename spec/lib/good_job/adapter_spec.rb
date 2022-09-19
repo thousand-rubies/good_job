@@ -28,6 +28,8 @@ RSpec.describe GoodJob::Adapter do
 
       expect(GoodJob::Execution).to have_received(:enqueue).with(
         active_job,
+        batch_id: nil,
+        batch_callback_id: nil,
         create_with_advisory_lock: false,
         scheduled_at: nil
       )
@@ -98,6 +100,8 @@ RSpec.describe GoodJob::Adapter do
 
       expect(GoodJob::Execution).to have_received(:enqueue).with(
         active_job,
+        batch_id: nil,
+        batch_callback_id: nil,
         create_with_advisory_lock: false,
         scheduled_at: scheduled_at.change(usec: 0)
       )
