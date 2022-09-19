@@ -10,7 +10,7 @@ RSpec.describe 'Batches' do
 
     stub_const 'ExpectedError', Class.new(StandardError)
     stub_const 'TestJob', (Class.new(ActiveJob::Base) do
-      retry_on(ExpectedError, wait: 0, attempts: 2, jitter: 0) { nil }
+      retry_on(ExpectedError, wait: 0, attempts: 2) { nil }
 
       def perform(error: false)
         raise ExpectedError if error

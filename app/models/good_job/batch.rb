@@ -88,7 +88,7 @@ module GoodJob
           return if callback_job_class.blank?
 
           callback_job_klass = callback_job_class.constantize
-          self.class.within_thread(current_batch_callback_id: id) do
+          self.class.within_thread(batch_callback_id: id) do
             callback_job_klass.set(priority: callback_priority, queue: callback_queue_name).perform_later(self)
           end
         end
