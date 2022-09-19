@@ -123,4 +123,25 @@ RSpec.describe 'Batches' do
       )
     end
   end
+
+  context 'when running inline' do
+    let(:adapter) { GoodJob::Adapter.new(execution_mode: :inline) }
+
+    before do
+      stub_const 'RecursiveJob', (Class.new(ActiveJob::Base) do
+        def perform(recurse)
+          RecursiveJob.perform_later(false) if recurse
+        end
+      end)
+    end
+
+    it 'does not unintentionally add sub-enqueued job to the batch' do
+      batch = GoodJob::Batch.enqueue do
+        RecursiveJob.perform_later(true)
+      end
+
+      expect(GoodJob::Job.count).to eq 2
+      expect(batch.jobs.count).to eq 1
+    end
+  end
 end

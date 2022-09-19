@@ -277,11 +277,14 @@ RSpec.describe GoodJob::Execution do
       context 'when there is an error' do
         let(:active_job) { TestJob.new("whoops", raise_error: true) }
         let(:batch_id) { SecureRandom.uuid }
+
         let!(:good_job) do
           execution = nil
           GoodJob::CurrentThread.within do
-            GoodJob::CurrentThread.cron_key = 'test_key'
-            execution = described_class.enqueue(active_job, batch_id: batch_id)
+            GoodJob::Batch.within_thread(batch_id: batch_id) do
+              GoodJob::CurrentThread.cron_key = 'test_key'
+              execution = described_class.enqueue(active_job)
+            end
           end
 
           execution

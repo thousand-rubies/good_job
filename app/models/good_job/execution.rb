@@ -21,6 +21,9 @@ module GoodJob
     self.advisory_lockable_column = 'active_job_id'
 
     define_model_callbacks :perform_unlocked, only: :after
+    define_model_callbacks :perform
+
+    set_callback :perform, :around, :reset_batch_values
     set_callback :perform_unlocked, :after, :finalize_batch
 
     # Parse a string representing a group of queues into a more readable data
@@ -249,8 +252,11 @@ module GoodJob
     #   Whether to establish a lock on the {Execution} record after it is created.
     # @return [Execution]
     #   The new {Execution} instance representing the queued ActiveJob job.
-    def self.enqueue(active_job, scheduled_at: nil, batch_id: nil, batch_callback_id: nil, create_with_advisory_lock: false)
+    def self.enqueue(active_job, scheduled_at: nil, create_with_advisory_lock: false)
       ActiveSupport::Notifications.instrument("enqueue_job.good_job", { active_job: active_job, scheduled_at: scheduled_at, create_with_advisory_lock: create_with_advisory_lock }) do |instrument_payload|
+        reenqueued_current_execution = CurrentThread.active_job_id && CurrentThread.active_job_id == active_job.job_id
+        current_execution = CurrentThread.execution
+
         execution_args = {
           active_job_id: active_job.job_id,
           queue_name: active_job.queue_name.presence || DEFAULT_QUEUE_NAME,
@@ -260,22 +266,17 @@ module GoodJob
           create_with_advisory_lock: create_with_advisory_lock,
         }
 
-        if CurrentThread.active_job_id == active_job.job_id
-          current_execution = CurrentThread.execution
-          execution_args[:batch_id] = current_execution.batch_id
-          execution_args[:batch_callback_id] = current_execution.batch_callback_id
-        else
-          execution_args[:batch_id] = batch_id
-          execution_args[:batch_callback_id] = batch_callback_id
-        end
-
         execution_args[:concurrency_key] = active_job.good_job_concurrency_key if active_job.respond_to?(:good_job_concurrency_key)
 
-        if CurrentThread.cron_key
+        if reenqueued_current_execution
+          execution_args[:batch_id] = current_execution.batch_id
+          execution_args[:batch_callback_id] = current_execution.batch_callback_id
+          execution_args[:cron_key] = current_execution.cron_key
+        else
+          execution_args[:batch_id] = GoodJob::Batch.current_batch_id
+          execution_args[:batch_callback_id] = GoodJob::Batch.current_batch_callback_id
           execution_args[:cron_key] = CurrentThread.cron_key
           execution_args[:cron_at] = CurrentThread.cron_at
-        elsif CurrentThread.active_job_id && CurrentThread.active_job_id == active_job.job_id
-          execution_args[:cron_key] = CurrentThread.execution.cron_key
         end
 
         execution = GoodJob::Execution.new(**execution_args)
@@ -284,8 +285,7 @@ module GoodJob
 
         execution.save!
         active_job.provider_job_id = execution.id
-
-        CurrentThread.execution.retried_good_job_id = execution.id if CurrentThread.active_job_id && CurrentThread.active_job_id == active_job.job_id
+        CurrentThread.execution.retried_good_job_id = execution.id if reenqueued_current_execution
 
         execution
       end
@@ -297,26 +297,28 @@ module GoodJob
     #   exception raised by the job, if any. If the job completed successfully,
     #   the second array entry (the exception) will be +nil+ and vice versa.
     def perform
-      raise PreviouslyPerformedError, 'Cannot perform a job that has already been performed' if finished_at
+      run_callbacks(:perform) do
+        raise PreviouslyPerformedError, 'Cannot perform a job that has already been performed' if finished_at
 
-      self.performed_at = Time.current
-      save! if GoodJob.preserve_job_records
+        self.performed_at = Time.current
+        save! if GoodJob.preserve_job_records
 
-      result = execute
+        result = execute
 
-      job_error = result.handled_error || result.unhandled_error
-      self.error = [job_error.class, ERROR_MESSAGE_SEPARATOR, job_error.message].join if job_error
+        job_error = result.handled_error || result.unhandled_error
+        self.error = [job_error.class, ERROR_MESSAGE_SEPARATOR, job_error.message].join if job_error
 
-      if result.unhandled_error && GoodJob.retry_on_unhandled_error
-        save!
-      elsif GoodJob.preserve_job_records == true || (result.unhandled_error && GoodJob.preserve_job_records == :on_unhandled_error)
-        self.finished_at = Time.current
-        save!
-      else
-        destroy!
+        if result.unhandled_error && GoodJob.retry_on_unhandled_error
+          save!
+        elsif GoodJob.preserve_job_records == true || (result.unhandled_error && GoodJob.preserve_job_records == :on_unhandled_error)
+          self.finished_at = Time.current
+          save!
+        else
+          destroy!
+        end
+
+        result
       end
-
-      result
     end
 
     # Tests whether this job is safe to be executed by this thread.
@@ -395,6 +397,10 @@ module GoodJob
           ExecutionResult.new(value: nil, unhandled_error: e)
         end
       end
+    end
+
+    def reset_batch_values(&block)
+      GoodJob::Batch.within_thread(batch_id: nil, batch_callback_id: nil, &block)
     end
 
     def finalize_batch

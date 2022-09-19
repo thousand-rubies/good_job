@@ -22,6 +22,19 @@ module GoodJob
       callback_priority
     ].freeze
 
+    def self.within_thread(batch_id: nil, batch_callback_id: nil)
+      original_batch_id = current_batch_id
+      original_batch_callback_id = current_batch_callback_id
+
+      self.current_batch_id = batch_id
+      self.current_batch_callback_id = batch_callback_id
+
+      yield
+    ensure
+      self.current_batch_id = original_batch_id
+      self.current_batch_callback_id = original_batch_callback_id
+    end
+
     def self.enqueue(_callback_job_class = nil, **params, &block)
       new_params = params.dup
       batch_attrs = PROTECTED_PARAMS.index_with { |key| new_params.delete(key) }
@@ -75,14 +88,8 @@ module GoodJob
           return if callback_job_class.blank?
 
           callback_job_klass = callback_job_class.constantize
-
-          begin
-            original_current_batch_callback_id = self.class.current_batch_callback_id
-            self.class.current_batch_callback_id = id
-
+          self.class.within_thread(current_batch_callback_id: id) do
             callback_job_klass.set(priority: callback_priority, queue: callback_queue_name).perform_later(self)
-          ensure
-            self.class.current_batch_callback_id = original_current_batch_callback_id
           end
         end
       end

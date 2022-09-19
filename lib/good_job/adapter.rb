@@ -57,9 +57,7 @@ module GoodJob
       execution = GoodJob::Execution.enqueue(
         active_job,
         scheduled_at: scheduled_at,
-        create_with_advisory_lock: will_execute_inline,
-        batch_id: GoodJob::Batch.current_batch_id,
-        batch_callback_id: GoodJob::Batch.current_batch_callback_id
+        create_with_advisory_lock: will_execute_inline
       )
 
       if will_execute_inline
