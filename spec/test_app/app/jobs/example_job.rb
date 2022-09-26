@@ -12,6 +12,12 @@ class ExampleJob < ApplicationJob
 
   retry_on(DeadError, attempts: 3) { nil }
 
+  class BatchCallbackJob < ApplicationJob
+    def perform(batch, **options)
+      nil
+    end
+  end
+
   def perform(type = SUCCESS_TYPE)
     if type == SUCCESS_TYPE
       true

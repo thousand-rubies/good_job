@@ -1,0 +1,57 @@
+  <div class="my-3 card" data-gj-poll-replace id="batches-table">
+    <div class="list-group list-group-flush text-nowrap table-batches" role="table">
+      <header class="list-group-item bg-light">
+        <div class="row small text-muted text-uppercase align-items-center">
+          <div class="col">Name</div>
+          <div class="col" >Created At</div>
+          <div class="col" >Enqueued At</div>
+          <div class="col" >Discarded At</div>
+          <div class="col" >Finished At</div>
+          <div class="col" >Jobs</div>
+          <div class="col text-end">
+            <%= tag.button type: "button", class: "btn btn-sm text-muted", role: "button",
+                           data: { bs_toggle: "collapse", bs_target: ".batch-properties" },
+                           aria: { expanded: false, controls: batches.map { |batch| "##{dom_id(batch, "params")}" }.join(" ") } do %>
+              <%= render_icon "info" %>
+              <span class="visually-hidden">Inspect</span>
+            <% end %>
+          </div>
+        </div>
+      </header>
+
+      <% if batches.present? %>
+        <% batches.each do |batch| %>
+          <div id="<%= dom_id(batch) %>" class="list-group-item py-3" role="row">
+            <div class="row align-items-center">
+              <div class="col">
+                <%= tag.code batch.id, class: "small text-muted text-decoration-none" %>
+                <%= tag.h5 tag.code (batch.callback_job_class || "Batch") %>
+                <div class="small text-muted"><%= "tbd description" %></div>
+              </div>
+              <div class="col"><%= relative_time(batch.created_at)  %></div>
+              <div class="col"><%= relative_time(batch.enqueued_at) if batch.enqueued_at %></div>
+              <div class="col"><%= relative_time(batch.discarded_at) if batch.discarded_at %></div>
+              <div class="col"><%= relative_time(batch.finished_at) if batch.finished_at %></div>
+              <div class="col"><%= batch.jobs.count %></div>
+              <div class="col text-end">
+                <%= tag.button type: "button", class: "btn btn-sm text-muted ms-auto", role: "button",
+                               title: "Inspect",
+                               data: { bs_toggle: "collapse", bs_target: "##{dom_id(batch, 'properties')}" },
+                               aria: { expanded: false, controls: dom_id(batch, "state") } do %>
+                  <%= render_icon "info" %>
+                  <span class="visually-hidden">Inspect</span>
+                <% end %>
+              </div>
+            </div>
+          </div>
+          <%= tag.div id: dom_id(batch, "properties"), class: "batch-properties list-group-item collapse small bg-dark text-light" do %>
+            <%= tag.pre JSON.pretty_generate(batch.properties) %>
+          <% end %>
+        <% end %>
+      <% else %>
+        <div class="list-group-item py-4 text-center text-muted">
+          No batches found.
+        </div>
+      <% end %>
+    </div>
+  </div>

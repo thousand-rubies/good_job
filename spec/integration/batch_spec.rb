@@ -41,17 +41,17 @@ RSpec.describe 'Batches' do
           TestJob.perform_later
         end
 
-        expect(batch.completed_at).to be_nil
+        expect(batch.finished_at).to be_nil
         expect(batch).to be_enqueued
 
         GoodJob.perform_inline
 
         batch.reload
-        expect(batch).to be_completed
+        expect(batch).to be_finished
         expect(batch).to be_succeeded
 
-        expect(batch.completed_at).to be_within(1.second).of(Time.current)
-        expect(batch.failed_at).to be_nil
+        expect(batch.finished_at).to be_within(1.second).of(Time.current)
+        expect(batch.discarded_at).to be_nil
       end
     end
 
@@ -64,21 +64,21 @@ RSpec.describe 'Batches' do
         GoodJob.perform_inline
 
         batch.reload
-        expect(batch).to be_completed
-        expect(batch).to be_failed
+        expect(batch).to be_finished
+        expect(batch).to be_discarded
 
-        expect(batch.completed_at).to be_within(1.second).of(Time.current)
-        expect(batch.failed_at).to be_within(1.second).of(Time.current)
+        expect(batch.finished_at).to be_within(1.second).of(Time.current)
+        expect(batch.discarded_at).to be_within(1.second).of(Time.current)
       end
     end
 
     context 'when there is a callback' do
       it 'calls the callback with a batch' do
-        batch = GoodJob::Batch.enqueue(callback_job_class: "BatchCallbackJob", some_property: "foobar") do
+        batch = GoodJob::Batch.enqueue(callback_job_class: "BatchCallbackJob", foo: "bar") do
           TestJob.perform_later
         end
 
-        expect(batch.params).to eq({ some_property: "foobar" })
+        expect(batch.properties).to eq({ foo: "bar" })
 
         GoodJob.perform_inline
 

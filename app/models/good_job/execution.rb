@@ -24,7 +24,7 @@ module GoodJob
     define_model_callbacks :perform
 
     set_callback :perform, :around, :reset_batch_values
-    set_callback :perform_unlocked, :after, :finalize_batch
+    set_callback :perform_unlocked, :after, :continue_discard_or_finish_batch
 
     # Parse a string representing a group of queues into a more readable data
     # structure.
@@ -70,6 +70,8 @@ module GoodJob
     end
 
     belongs_to :batch, class_name: 'GoodJob::Batch', optional: true, inverse_of: :executions
+    belongs_to :batch_callback, class_name: 'GoodJob::Batch', optional: true
+
     belongs_to :job, class_name: 'GoodJob::Job', foreign_key: 'active_job_id', primary_key: 'active_job_id', optional: true, inverse_of: :executions
 
     # Get Jobs with given ActiveJob ID
@@ -403,8 +405,8 @@ module GoodJob
       GoodJob::Batch.within_thread(batch_id: nil, batch_callback_id: nil, &block)
     end
 
-    def finalize_batch
-      batch._finalize(self) if batch.present?
+    def continue_discard_or_finish_batch
+      batch._continue_discard_or_finish(self) if batch.present?
     end
   end
 end

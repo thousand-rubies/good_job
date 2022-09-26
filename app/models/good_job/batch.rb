@@ -10,17 +10,35 @@ module GoodJob
     self.table_name = 'good_job_batches'
 
     has_many :executions, class_name: 'GoodJob::Execution', inverse_of: :batch, dependent: nil
+    has_many :callback_jobs, class_name: 'GoodJob::Job', dependent: nil
+
     has_many :jobs, class_name: 'GoodJob::Job', inverse_of: :batch, dependent: nil
 
     alias_attribute :enqueued?, :enqueued_at
-    alias_attribute :completed?, :completed_at
-    alias_attribute :failed?, :failed_at
+    alias_attribute :discarded?, :discarded_at
+    alias_attribute :finished?, :finished_at
 
-    PROTECTED_PARAMS = %i[
+    PROTECTED_PROPERTIES = %i[
       callback_job_class
       callback_queue_name
       callback_priority
     ].freeze
+
+    scope :display_all, (lambda do |after_created_at: nil, after_id: nil|
+      query = order(created_at: :desc, id: :desc)
+      if after_created_at.present? && after_id.present?
+        query = query.where(Arel.sql('(created_at, id) < (:after_created_at, :after_id)'), after_created_at: after_created_at, after_id: after_id)
+      elsif after_created_at.present?
+        query = query.where(Arel.sql('(after_created_at) < (:after_created_at)'), after_created_at: after_created_at)
+      end
+      query
+    end)
+
+    def self.enqueue(callback_job_class = nil, **properties, &block)
+      new.tap do |batch|
+        batch.enqueue(callback_job_class, **properties, &block)
+      end
+    end
 
     def self.within_thread(batch_id: nil, batch_callback_id: nil)
       original_batch_id = current_batch_id
@@ -35,18 +53,8 @@ module GoodJob
       self.current_batch_callback_id = original_batch_callback_id
     end
 
-    def self.enqueue(_callback_job_class = nil, **params, &block)
-      new_params = params.dup
-      batch_attrs = PROTECTED_PARAMS.index_with { |key| new_params.delete(key) }
-      batch_attrs[:params] = new_params
-
-      new(batch_attrs).tap do |batch|
-        batch.enqueue(&block)
-      end
-    end
-
     def succeeded?
-      !failed? && completed?
+      !discarded? && finished?
     end
 
     def add(&block)
@@ -62,33 +70,40 @@ module GoodJob
       Bulk.enqueue(wrap: wrapper, &block)
     end
 
-    def enqueue(&block)
+    def enqueue(callback_job_class = nil, **properties, &block)
+      properties = properties.dup
+      batch_attrs = PROTECTED_PROPERTIES.index_with { |key| properties.delete(key) }.compact
+      batch_attrs[:callback_job_class] = callback_job_class if callback_job_class
+      batch_attrs[:properties] = self.properties.merge(properties)
+
+      update(batch_attrs)
       add(&block) if block
       self.enqueued_at = Time.current if enqueued_at.nil?
       save
-      _finalize
+      _continue_discard_or_finish
     end
 
-    def params=(value)
-      @_params = value
-      self.serialized_params = ActiveJob::Arguments.serialize(value)
+    def properties=(value)
+      self.serialized_properties = ActiveJob::Arguments.serialize([value])
     end
 
-    def params
-      @_params ||= ActiveJob::Arguments.deserialize(serialized_params)
+    def properties
+      return {} if serialized_properties.blank?
+
+      ActiveJob::Arguments.deserialize(serialized_properties).first
     end
 
-    def _finalize(execution = nil)
+    def _continue_discard_or_finish(execution = nil)
       execution_discarded = execution && execution.error.present? && execution.retried_good_job_id.nil?
       with_advisory_lock(function: "pg_advisory_lock") do
-        update(failed_at: Time.current) if execution_discarded && failed_at.blank?
+        update(discarded_at: Time.current) if execution_discarded && discarded_at.blank?
 
-        if jobs.where(finished_at: nil).count.zero?
-          update(completed_at: Time.current)
+        if enqueued_at && jobs.where(finished_at: nil).count.zero?
+          update(finished_at: Time.current)
           return if callback_job_class.blank?
 
           callback_job_klass = callback_job_class.constantize
-          self.class.within_thread(batch_callback_id: id) do
+          self.class.within_thread(batch_id: nil, batch_callback_id: id) do
             callback_job_klass.set(priority: callback_priority, queue: callback_queue_name).perform_later(self)
           end
         end

@@ -56,6 +56,7 @@ module GoodJob
     scope :queued, -> { where(finished_at: nil).where('COALESCE(scheduled_at, created_at) <= ?', DateTime.current).joins_advisory_locks.where(pg_locks: { locktype: nil }) }
     # Advisory locked and executing
     scope :running, -> { where(finished_at: nil).joins_advisory_locks.where.not(pg_locks: { locktype: nil }) }
+    # TODO: Rename scope from `.finished` to `.succeeded` and add `.finished` which is succeeded or discarded
     # Completed executing successfully
     scope :finished, -> { not_discarded.where.not(finished_at: nil) }
     # Errored but will not be retried

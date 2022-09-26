@@ -56,4 +56,13 @@ describe GoodJob::Batch do
       expect { batch.enqueue }.not_to change(batch, :enqueued_at)
     end
   end
+
+  describe '#properties' do
+    it 'serializes and deserializes values' do
+      batch = described_class.create(properties: { foo: 'bar' })
+      reloaded_batch = described_class.find(batch.id)
+
+      expect(reloaded_batch.properties).to eq({ foo: 'bar' })
+    end
+  end
 end

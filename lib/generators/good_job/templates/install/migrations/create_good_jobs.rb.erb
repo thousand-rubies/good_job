@@ -31,8 +31,8 @@ class CreateGoodJobs < ActiveRecord::Migration<%= migration_version %>
       t.text :callback_queue_name
       t.integer :callback_priority
       t.datetime :enqueued_at
-      t.datetime :failed_at
-      t.datetime :completed_at
+      t.datetime :discarded_at
+      t.datetime :finished_at
     end
 
     create_table :good_job_processes, id: :uuid do |t|

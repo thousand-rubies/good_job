@@ -11,13 +11,13 @@ class CreateGoodJobBatches < ActiveRecord::Migration[6.1]
 
     create_table :good_job_batches, id: :uuid do |t|
       t.timestamps
-      t.jsonb :serialized_params
+      t.jsonb :serialized_properties
       t.text :callback_job_class
       t.text :callback_queue_name
       t.integer :callback_priority
       t.datetime :enqueued_at
-      t.datetime :failed_at
-      t.datetime :completed_at
+      t.datetime :discarded_at
+      t.datetime :finished_at
     end
 
     change_table :good_jobs do |t|
