@@ -431,7 +431,8 @@ Batches track a set of jobs, and enqueue an optional callback job when all of th
     ```
 
 - If you need to access the batch within a model, include [`GoodJob::ActiveJobExtensions::Batches`](lib/good_job/active_job_extensions/batches.rb) in your job class:
-    ```ruby
+
+  ```ruby
     class MyJob < ApplicationJob
       include GoodJob::ActiveJobExtensions::Batches
 

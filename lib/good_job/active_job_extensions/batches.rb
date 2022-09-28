@@ -4,12 +4,6 @@ module GoodJob
     module Batches
       extend ActiveSupport::Concern
 
-      class_methods do
-        def batch_enqueue(callback_job_class = nil, **properties, &block)
-          GoodJob::Batch.enqueue(callback_job_class, **properties, &block)
-        end
-      end
-
       def batch
         CurrentThread.execution&.batch
       end

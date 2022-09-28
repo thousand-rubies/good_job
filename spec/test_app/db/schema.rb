@@ -19,6 +19,7 @@ ActiveRecord::Schema.define(version: 2022_09_19_145526) do
   create_table "good_job_batches", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", precision: 6, null: false
     t.datetime "updated_at", precision: 6, null: false
+    t.text "description"
     t.jsonb "serialized_properties"
     t.text "callback_job_class"
     t.text "callback_queue_name"

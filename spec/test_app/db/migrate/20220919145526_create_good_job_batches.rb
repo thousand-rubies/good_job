@@ -11,6 +11,7 @@ class CreateGoodJobBatches < ActiveRecord::Migration[6.1]
 
     create_table :good_job_batches, id: :uuid do |t|
       t.timestamps
+      t.text :description
       t.jsonb :serialized_properties
       t.text :callback_job_class
       t.text :callback_queue_name
