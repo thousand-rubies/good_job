@@ -2,12 +2,12 @@
     <div class="list-group list-group-flush text-nowrap table-batches" role="table">
       <header class="list-group-item bg-light">
         <div class="row small text-muted text-uppercase align-items-center">
-          <div class="col">Name</div>
-          <div class="col" >Created At</div>
-          <div class="col" >Enqueued At</div>
-          <div class="col" >Discarded At</div>
-          <div class="col" >Finished At</div>
-          <div class="col" >Jobs</div>
+          <div class="col-4">Name</div>
+          <div class="col-1">Created</div>
+          <div class="col-1">Enqueued</div>
+          <div class="col-1">Discarded</div>
+          <div class="col-1">Finished</div>
+          <div class="col">Jobs</div>
           <div class="col text-end">
             <%= tag.button type: "button", class: "btn btn-sm text-muted", role: "button",
                            data: { bs_toggle: "collapse", bs_target: ".batch-properties" },
@@ -23,15 +23,19 @@
         <% batches.each do |batch| %>
           <div id="<%= dom_id(batch) %>" class="list-group-item py-3" role="row">
             <div class="row align-items-center">
-              <div class="col">
-                <%= tag.code batch.id, class: "small text-muted text-decoration-none" %>
-                <%= tag.h5 tag.code (batch.callback_job_class || "Batch") %>
-                <div class="small text-muted"><%= "tbd description" %></div>
+              <div class="col-4">
+                <%= link_to batch_path(batch), class: "text-decoration-none" do %>
+                  <code class="small text-muted">
+                    <%= batch.id %>
+                  </code>
+                  <h5 class=""><code><%= batch.callback_job_class %></code></h5>
+                  <div class="text-muted"><%= batch.description %></div>
+                <% end %>
               </div>
-              <div class="col"><%= relative_time(batch.created_at)  %></div>
-              <div class="col"><%= relative_time(batch.enqueued_at) if batch.enqueued_at %></div>
-              <div class="col"><%= relative_time(batch.discarded_at) if batch.discarded_at %></div>
-              <div class="col"><%= relative_time(batch.finished_at) if batch.finished_at %></div>
+              <div class="col-1 text-wrap"><%= relative_time(batch.created_at)  %></div>
+              <div class="col-1 text-wrap"><%= relative_time(batch.enqueued_at) if batch.enqueued_at %></div>
+              <div class="col-1 text-wrap"><%= relative_time(batch.discarded_at) if batch.discarded_at %></div>
+              <div class="col-1 text-wrap"><%= relative_time(batch.finished_at) if batch.finished_at %></div>
               <div class="col"><%= batch.jobs.count %></div>
               <div class="col text-end">
                 <%= tag.button type: "button", class: "btn btn-sm text-muted ms-auto", role: "button",

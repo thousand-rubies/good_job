@@ -74,10 +74,11 @@ RSpec.describe 'Batches' do
 
     context 'when there is a callback' do
       it 'calls the callback with a batch' do
-        batch = GoodJob::Batch.enqueue(callback_job_class: "BatchCallbackJob", foo: "bar") do
+        batch = GoodJob::Batch.enqueue(description: "foobar", callback_job_class: "BatchCallbackJob", foo: "bar") do
           TestJob.perform_later
         end
 
+        expect(batch.description).to eq "foobar"
         expect(batch.properties).to eq({ foo: "bar" })
 
         GoodJob.perform_inline

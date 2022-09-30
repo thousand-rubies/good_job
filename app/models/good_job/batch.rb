@@ -10,9 +10,8 @@ module GoodJob
     self.table_name = 'good_job_batches'
 
     has_many :executions, class_name: 'GoodJob::Execution', inverse_of: :batch, dependent: nil
-    has_many :callback_jobs, class_name: 'GoodJob::Job', dependent: nil
-
     has_many :jobs, class_name: 'GoodJob::Job', inverse_of: :batch, dependent: nil
+    has_many :callback_jobs, class_name: 'GoodJob::Job', foreign_key: :batch_callback_id, dependent: nil # rubocop:disable Rails/InverseOf
 
     alias_attribute :enqueued?, :enqueued_at
     alias_attribute :discarded?, :discarded_at
@@ -22,6 +21,7 @@ module GoodJob
       callback_job_class
       callback_queue_name
       callback_priority
+      description
     ].freeze
 
     scope :display_all, (lambda do |after_created_at: nil, after_id: nil|
@@ -91,6 +91,10 @@ module GoodJob
       return {} if serialized_properties.blank?
 
       ActiveJob::Arguments.deserialize(serialized_properties).first
+    end
+
+    def display_attributes
+      attributes.except('serialized_properties').merge(properties: properties)
     end
 
     def _continue_discard_or_finish(execution = nil)

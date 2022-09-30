@@ -4,5 +4,9 @@ module GoodJob
     def index
       @filter = BatchesFilter.new(params)
     end
+
+    def show
+      @batch = GoodJob::Batch.find(params[:id])
+    end
   end
 end
