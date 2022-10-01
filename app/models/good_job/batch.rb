@@ -23,7 +23,6 @@ module GoodJob
     alias_attribute :finished?, :finished_at
 
     PROTECTED_PROPERTIES = %i[
-      description
       callback_job_class
       callback_queue_name
       callback_priority
