@@ -55,11 +55,9 @@ describe GoodJob::Batch do
       batch.enqueued_at = 1.day.ago
       expect { batch.enqueue }.not_to change(batch, :enqueued_at)
     end
-  end
 
-  describe '#enqueue' do
     it 'can assign the callback job' do
-      batch = GoodJob::Batch.new
+      batch = described_class.new
       batch.enqueue(TestJob)
 
       expect(batch.callback_job_class).to eq "TestJob"

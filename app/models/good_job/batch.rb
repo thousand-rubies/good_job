@@ -16,7 +16,7 @@ module GoodJob
     scope :finished, -> { where.not(finished_at: nil) }
     scope :discarded, -> { where.not(discarded_at: nil) }
     scope :not_discarded, -> { where(discarded_at: nil) }
-    scope :succeeded, -> { finished.not_discarded}
+    scope :succeeded, -> { finished.not_discarded }
 
     alias_attribute :enqueued?, :enqueued_at
     alias_attribute :discarded?, :discarded_at
