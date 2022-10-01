@@ -418,7 +418,7 @@ Batches track a set of jobs, and enqueue an optional callback job when all of th
     end
     ```
 
-- Jobs can be added to an existing batch. Only once a batch is `enqueued` will the final callback be enqueuable.
+- Jobs can be added to an existing batch. Jobs in a batch are enqueued and performed immediately, though the final callback job will not be enqueued until `GoodJob::Batch#enqueue` is called.
 
     ```ruby
     batch = GoodJob::Batch.add do
@@ -458,7 +458,7 @@ Batches track a set of jobs, and enqueue an optional callback job when all of th
   batch = GoodJob::Batch.where(callback_job_class: "MyBatchCallbackJob").first
   batch.discarded? # => Boolean
   batch.discarded_at # => <DateTime>
-  batch.finished # => Boolean
+  batch.finished? # => Boolean
   batch.finished_at # => <DateTime>
   batch.succeeded? # => Boolean
 ```

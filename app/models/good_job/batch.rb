@@ -13,11 +13,17 @@ module GoodJob
     has_many :jobs, class_name: 'GoodJob::Job', inverse_of: :batch, dependent: nil
     has_many :callback_jobs, class_name: 'GoodJob::Job', foreign_key: :batch_callback_id, dependent: nil # rubocop:disable Rails/InverseOf
 
+    scope :finished, -> { where.not(finished_at: nil) }
+    scope :discarded, -> { where.not(discarded_at: nil) }
+    scope :not_discarded, -> { where(discarded_at: nil) }
+    scope :succeeded, -> { finished.not_discarded}
+
     alias_attribute :enqueued?, :enqueued_at
     alias_attribute :discarded?, :discarded_at
     alias_attribute :finished?, :finished_at
 
     PROTECTED_PROPERTIES = %i[
+      description
       callback_job_class
       callback_queue_name
       callback_priority

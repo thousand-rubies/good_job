@@ -57,6 +57,15 @@ describe GoodJob::Batch do
     end
   end
 
+  describe '#enqueue' do
+    it 'can assign the callback job' do
+      batch = GoodJob::Batch.new
+      batch.enqueue(TestJob)
+
+      expect(batch.callback_job_class).to eq "TestJob"
+    end
+  end
+
   describe '#properties' do
     it 'serializes and deserializes values' do
       batch = described_class.create(properties: { foo: 'bar' })
