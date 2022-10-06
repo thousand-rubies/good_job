@@ -271,12 +271,16 @@ module GoodJob
         execution_args[:concurrency_key] = active_job.good_job_concurrency_key if active_job.respond_to?(:good_job_concurrency_key)
 
         if reenqueued_current_execution
-          execution_args[:batch_id] = current_execution.batch_id
-          execution_args[:batch_callback_id] = current_execution.batch_callback_id
+          if GoodJob::Batch.migrated?
+            execution_args[:batch_id] = current_execution.batch_id
+            execution_args[:batch_callback_id] = current_execution.batch_callback_id
+          end
           execution_args[:cron_key] = current_execution.cron_key
         else
-          execution_args[:batch_id] = GoodJob::Batch.current_batch_id
-          execution_args[:batch_callback_id] = GoodJob::Batch.current_batch_callback_id
+          if GoodJob::Batch.migrated?
+            execution_args[:batch_id] = GoodJob::Batch.current_batch_id
+            execution_args[:batch_callback_id] = GoodJob::Batch.current_batch_callback_id
+          end
           execution_args[:cron_key] = CurrentThread.cron_key
           execution_args[:cron_at] = CurrentThread.cron_at
         end
@@ -406,7 +410,7 @@ module GoodJob
     end
 
     def continue_discard_or_finish_batch
-      batch._continue_discard_or_finish(self) if batch.present?
+      batch._continue_discard_or_finish(self) if GoodJob::Batch.migrated? && batch.present?
     end
   end
 end

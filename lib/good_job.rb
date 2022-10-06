@@ -162,9 +162,13 @@ module GoodJob
       old_jobs = old_jobs.not_discarded unless include_discarded
       deleted_executions_count = GoodJob::Execution.where(job: old_jobs).delete_all
 
-      old_batches = GoodJob::Batch.where('finished_at <= ?', timestamp)
-      old_batches = old_batches.not_discarded unless include_discarded
-      deleted_batches_count = old_batches.delete_all
+      if GoodJob::Batch.migrated?
+        old_batches = GoodJob::Batch.where('finished_at <= ?', timestamp)
+        old_batches = old_batches.not_discarded unless include_discarded
+        deleted_batches_count = old_batches.delete_all
+      else
+        deleted_batches_count = 0
+      end
 
       payload[:destroyed_executions_count] = deleted_executions_count
       payload[:destroyed_executions_count] = deleted_batches_count

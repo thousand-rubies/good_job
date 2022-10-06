@@ -442,7 +442,7 @@ Batches track a set of jobs, and enqueue an optional callback job when all of th
     end
     ```
 
-- [`GoodJob::Batch`](app/models/good_job/batch.rb) is an Active Record model that you can query and access its attributes like any other model:
+- [`GoodJob::Batch`](app/models/good_job/batch.rb) is an Active Record model and access its attributes like any other model:
 
 ```ruby
   batch = GoodJob::Batch.new
@@ -451,9 +451,10 @@ Batches track a set of jobs, and enqueue an optional callback job when all of th
   batch.callback_queue_name = "special_queue"
   batch.callback.priority = 10
   batch.properties = { age: 42 }
-  batch.enqueue do
+  batch.add do
     MyJob.perform_later
   end
+  batch.enqueue
 
   batch = GoodJob::Batch.where(callback_job_class: "MyBatchCallbackJob").first
   batch.discarded? # => Boolean
@@ -461,6 +462,7 @@ Batches track a set of jobs, and enqueue an optional callback job when all of th
   batch.finished? # => Boolean
   batch.finished_at # => <DateTime>
   batch.succeeded? # => Boolean
+  batch.jobs # => <ActiveRecord::Relation of GoodJob::Job>
 ```
 
 ### ActiveJob concurrency
