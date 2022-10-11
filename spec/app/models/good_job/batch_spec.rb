@@ -71,5 +71,24 @@ describe GoodJob::Batch do
 
       expect(reloaded_batch.properties).to eq({ foo: 'bar' })
     end
+
+    it 'can modify values and they are saved' do
+      batch = described_class.create(properties: { foo: 'bar' })
+      batch.properties[:foo] = 'baz'
+      batch.save!
+
+      reloaded_batch = described_class.find(batch.id)
+      expect(reloaded_batch.properties).to eq({ foo: 'baz' })
+      reloaded_batch.properties[:foo] = 'quz'
+      reloaded_batch.save!
+
+      batch.reload
+      expect(batch.properties).to eq({ foo: 'quz' })
+      batch.properties = {}
+      batch.save!
+
+      reloaded_batch.reload
+      expect(reloaded_batch.properties).to eq({})
+    end
   end
 end

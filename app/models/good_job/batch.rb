@@ -18,6 +18,10 @@ module GoodJob
     scope :not_discarded, -> { where(discarded_at: nil) }
     scope :succeeded, -> { finished.not_discarded }
 
+    before_save do
+      self.serialized_properties = ActiveJob::Arguments.serialize([properties])
+    end
+
     alias_attribute :enqueued?, :enqueued_at
     alias_attribute :discarded?, :discarded_at
     alias_attribute :finished?, :finished_at
@@ -58,6 +62,11 @@ module GoodJob
       self.current_batch_callback_id = original_batch_callback_id
     end
 
+    def reload
+      @_properties = nil
+      super
+    end
+
     def succeeded?
       !discarded? && finished?
     end
@@ -83,19 +92,20 @@ module GoodJob
 
       update(batch_attrs)
       add(&block) if block
-      self.enqueued_at = Time.current if enqueued_at.nil?
-      save
+      update(finished_at: nil, enqueued_at: Time.current)
       _continue_discard_or_finish
     end
 
     def properties=(value)
-      self.serialized_properties = ActiveJob::Arguments.serialize([value])
+      @_properties = value
     end
 
     def properties
-      return {} if serialized_properties.blank?
-
-      ActiveJob::Arguments.deserialize(serialized_properties).first
+      @_properties ||= if serialized_properties.blank?
+                         {}
+                       else
+                         ActiveJob::Arguments.deserialize(serialized_properties).first
+                       end
     end
 
     def display_attributes
@@ -107,7 +117,7 @@ module GoodJob
       with_advisory_lock(function: "pg_advisory_lock") do
         update(discarded_at: Time.current) if execution_discarded && discarded_at.blank?
 
-        if enqueued_at && jobs.where(finished_at: nil).count.zero?
+        if !finished_at && enqueued_at && jobs.where(finished_at: nil).count.zero?
           update(finished_at: Time.current)
           return if callback_job_class.blank?
 

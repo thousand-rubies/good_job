@@ -145,4 +145,42 @@ RSpec.describe 'Batches' do
       expect(batch.jobs.count).to eq 1
     end
   end
+
+  describe 'complex recursive batching' do
+    let(:adapter) { GoodJob::Adapter.new(execution_mode: :inline) }
+
+    before do
+      stub_const 'DONE', Concurrent::AtomicBoolean.new(false)
+      stub_const 'SimpleJob', (Class.new(ActiveJob::Base) do
+        def perform
+        end
+      end)
+      stub_const 'MyBatchJob', (Class.new(ActiveJob::Base) do
+        def perform(batch, _options = {})
+          case batch.properties[:stage]
+          when 1
+            batch.enqueue(stage: 2) do
+              3.times { SimpleJob.perform_later }
+            end
+          when 2
+            batch.enqueue(stage: 3) do
+              7.times { SimpleJob.perform_later }
+            end
+          else
+            DONE.make_true
+          end
+        end
+      end)
+    end
+
+    it 'can enqueue multiple jobs' do
+      batch = GoodJob::Batch.enqueue("MyBatchJob", stage: 1)
+      GoodJob.perform_inline
+
+      expect(DONE.value).to be true
+      expect(batch.jobs.count).to eq 10
+      expect(batch.callback_jobs.count).to eq 3
+      expect(GoodJob::Execution.count).to eq 13
+    end
+  end
 end
