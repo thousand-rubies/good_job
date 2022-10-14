@@ -43,12 +43,18 @@ module GoodJob
       query
     end)
 
+    # Create a new batch and enqueue it
+    # @param callback_job_class [String, Object] The class name of the callback job to be enqueued after the batch is finished
+    # @param properties [Hash] Additional properties to be stored on the batch
+    # @param block [Proc] Enqueue jobs within the block to add them to the batch
+    # @return [GoodJob::Batch]
     def self.enqueue(callback_job_class = nil, **properties, &block)
       new.tap do |batch|
         batch.enqueue(callback_job_class, **properties, &block)
       end
     end
 
+    # Helper method to enqueue jobs and assign them to a batch
     def self.within_thread(batch_id: nil, batch_callback_id: nil)
       original_batch_id = current_batch_id
       original_batch_callback_id = current_batch_callback_id
@@ -67,10 +73,15 @@ module GoodJob
       super
     end
 
+    # Whether the batch has finished and no jobs were discarded
+    # @return [Boolean]
     def succeeded?
       !discarded? && finished?
     end
 
+    # Add jobs to the batch
+    # @param block [Proc] Enqueue jobs within the block to add them to the batch
+    # @return [void]
     def add(&block)
       save
 
@@ -84,6 +95,11 @@ module GoodJob
       Bulk.enqueue(wrap: wrapper, &block)
     end
 
+    # Add jobs and (re-)enqueue the batch
+    # @param callback_job_class [String, Object] The class name of the callback job to be enqueued after the batch is finished
+    # @param properties [Hash] Additional properties to be stored on the batch
+    # @param block [Proc] Enqueue jobs within the block to add them to the batch
+    # @return [void]
     def enqueue(callback_job_class = nil, **properties, &block)
       properties = properties.dup
       batch_attrs = PROTECTED_PROPERTIES.index_with { |key| properties.delete(key) }.compact
