@@ -12,12 +12,12 @@ gemspec
 # Git. Remember to move these dependencies to your gemspec before releasing
 # your gem to rubygems.org.
 
-gem 'activerecord-jdbcpostgresql-adapter', platforms: [:jruby]
+gem 'activerecord-jdbcpostgresql-adapter', '>= 61.2', platforms: [:jruby]
 gem 'appraisal', github: "bensheldon/appraisal", branch: "fix-bundle-env" # https://github.com/thoughtbot/appraisal/pull/174
 gem 'matrix'
 gem 'nokogiri'
 gem 'pg', platforms: [:mri, :mingw, :x64_mingw]
-gem 'rails'
+gem 'rails', '>= 6.1.7.5'
 
 platforms :ruby do
   gem "activerecord-explain-analyze"
@@ -25,12 +25,12 @@ platforms :ruby do
 
   group :lint do
     gem 'easy_translate'
-    gem "erb_lint"
-    gem 'i18n-tasks'
+    gem "erb_lint", ">= 0.2.0"
+    gem 'i18n-tasks', '>= 1.0.12'
     gem "mdl"
     gem "rubocop"
     gem "rubocop-performance"
-    gem "rubocop-rails"
+    gem "rubocop-rails", ">= 2.16.0"
     gem "rubocop-rspec"
   end
 end
