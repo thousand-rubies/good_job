@@ -25,12 +25,12 @@ platforms :ruby do
 
   group :lint do
     gem 'easy_translate'
-    gem "erb_lint"
+    gem "erb_lint", ">= 0.2.0"
     gem 'i18n-tasks'
-    gem "mdl"
-    gem "rubocop"
-    gem "rubocop-performance"
-    gem "rubocop-rails"
-    gem "rubocop-rspec"
+    gem "mdl", ">= 0.12.0"
+    gem "rubocop", ">= 1.32.0"
+    gem "rubocop-performance", ">= 1.15.0"
+    gem "rubocop-rails", ">= 2.16.0"
+    gem "rubocop-rspec", ">= 2.13.0"
   end
 end
