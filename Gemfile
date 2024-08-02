@@ -28,7 +28,7 @@ platforms :ruby do
     gem "erb_lint"
     gem 'i18n-tasks'
     gem "mdl"
-    gem "rubocop"
+    gem "rubocop", ">= 1.32.0"
     gem "rubocop-performance"
     gem "rubocop-rails"
     gem "rubocop-rspec"
