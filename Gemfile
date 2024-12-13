@@ -17,7 +17,7 @@ gem 'appraisal', github: "bensheldon/appraisal", branch: "fix-bundle-env" # http
 gem 'matrix'
 gem 'nokogiri'
 gem 'pg', platforms: [:mri, :mingw, :x64_mingw]
-gem 'rails'
+gem 'rails', '>= 7.0.8.7'
 
 platforms :ruby do
   gem "activerecord-explain-analyze"
