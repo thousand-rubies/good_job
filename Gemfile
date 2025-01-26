@@ -12,7 +12,7 @@ gemspec
 # Git. Remember to move these dependencies to your gemspec before releasing
 # your gem to rubygems.org.
 
-gem 'activerecord-jdbcpostgresql-adapter', platforms: [:jruby]
+gem 'activerecord-jdbcpostgresql-adapter', '>= 71.0', platforms: [:jruby]
 gem 'appraisal', github: "bensheldon/appraisal", branch: "fix-bundle-env" # https://github.com/thoughtbot/appraisal/pull/174
 gem 'matrix'
 gem 'nokogiri'
