@@ -17,7 +17,7 @@ gem 'appraisal', github: "bensheldon/appraisal", branch: "fix-bundle-env" # http
 gem 'matrix'
 gem 'nokogiri'
 gem 'pg', platforms: [:mri, :mingw, :x64_mingw]
-gem 'rails'
+gem 'rails', '>= 7.0.0'
 
 platforms :ruby do
   gem "activerecord-explain-analyze"
@@ -29,8 +29,8 @@ platforms :ruby do
     gem 'i18n-tasks'
     gem "mdl"
     gem "rubocop"
-    gem "rubocop-performance"
-    gem "rubocop-rails"
+    gem "rubocop-performance", ">= 1.24.0"
+    gem "rubocop-rails", ">= 2.30.0"
     gem "rubocop-rspec"
   end
 end
